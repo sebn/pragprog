@@ -223,6 +223,12 @@ describe('bookFile', () => {
 })
 
 describe('scheduleBookDownload', () => {
+  const slug = 'book1'
+  const otherSlug = 'book2'
+  const data = {
+    booksBySlug: new Map([[slug, { slug }], [otherSlug, { slug: otherSlug }]]),
+    booksRegenerating: [otherSlug]
+  }
   let $
 
   describe('when files are being (re)generated', () => {
@@ -230,9 +236,11 @@ describe('scheduleBookDownload', () => {
       $ = cheerio.load(downloadPageRegeneratingHtml)
     })
 
-    it('returns nothing', () => {
-      // TODO: instead, add slug to a set of books being regenerated
-      expect(scheduleBookDownload({ $ })).toEqual(undefined)
+    it('returns previous data with the book marked as regenerating', () => {
+      expect(scheduleBookDownload({ data, $ }, slug)).toEqual({
+        ...data,
+        booksRegenerating: [otherSlug, slug]
+      })
     })
   })
 
@@ -242,7 +250,7 @@ describe('scheduleBookDownload', () => {
     })
 
     it('returns the necessary next steps', () => {
-      expect(scheduleBookDownload({ $ })).toEqual([
+      expect(scheduleBookDownload({ data, $ }, slug)).toEqual([
         ['parseBookFiles', 'book1'],
         ['downloadAllFiles']
       ])

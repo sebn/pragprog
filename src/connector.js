@@ -92,13 +92,12 @@ const bookFile = book => fileurl => ({
 
 const findBook = (data, slug) => data.booksBySlug.get(slug)
 
-const scheduleBookDownload = ({ $ }, slug) => {
+const scheduleBookDownload = ({ data, $ }, slug) => {
   if ($('#regen_status').length > 0) {
-    log(
-      'info',
-      `Files for ${slug} are being (re)generated.` +
-        ' They will be downloaded on next connector run.'
-    )
+    return {
+      ...data,
+      booksRegenerating: [...data.booksRegenerating, slug]
+    }
   } else {
     return [['parseBookFiles', slug], ['downloadAllFiles']]
   }
@@ -114,6 +113,15 @@ const parseBookFiles = ({ data, $ }, slug) => {
 const downloadAllFiles = ({ data: { files }, fields }) =>
   saveFiles(files, fields)
 
+const logAndSkipBooksRegenerating = ({ data: { booksRegenerating } }) => {
+  log(
+    'info',
+    `Files for the following books are being (re)generated and` +
+      ' will be downloaded on next connector run: ' +
+      booksRegenerating.join(', ')
+  )
+}
+
 const connector = fp.connector({
   initial: {
     data: { booksBySlug: new Map(), files: [] },
@@ -122,7 +130,8 @@ const connector = fp.connector({
       authenticate,
       requestBookshelf,
       parseBookshelf,
-      downloadAllBooks
+      downloadAllBooks,
+      logAndSkipBooksRegenerating
     ]
   },
   stepsByName: {
